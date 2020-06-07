@@ -24,17 +24,21 @@ class PointsController {
       longitude,
       city,
       uf,
-      image: "image-fake",
+      image: request.file.filename,
     };
+
     const insertedIds = await transaction("points").insert(point);
     const point_id = insertedIds[0];
 
-    const pointItems = items.map((item_id: number) => {
-      return {
-        item_id,
-        point_id,
-      };
-    });
+    const pointItems = items
+      .split(",")
+      .map((item: string) => Number(item.trim()))
+      .map((item_id: number) => {
+        return {
+          item_id,
+          point_id,
+        };
+      });
 
     await transaction("point_items").insert(pointItems);
 
@@ -57,7 +61,13 @@ class PointsController {
       .where("point_items.point_id", id)
       .select("items.title");
 
-    return response.json({ point, items });
+    const serializedItems = {
+      ...point,
+      image_url: `http://localhost:3333/uploads/${point.image}`,
+      image_url_mobile: `http://192.168.0.47:3333/uploads/${point.image}`,
+    };
+
+    return response.json({ point: serializedItems, items });
   }
 
   async index(request: Request, response: Response) {
@@ -73,9 +83,17 @@ class PointsController {
       .where("city", String(city))
       .where("uf", String(uf))
       .distinct()
-      .select('points.*');
-    
-    response.json(points);
+      .select("points.*");
+
+    const serializedItems = points.map((point) => {
+      return {
+        ...point,
+        image_url: `http://localhost:3333/uploads/${point.image}`,
+        image_url_mobile: `http://192.168.0.47:3333/uploads/${point.image}`,
+      };
+    });
+
+    response.json(serializedItems);
   }
 }
 
